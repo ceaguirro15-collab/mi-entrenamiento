@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan Híbrido Elite - App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #020617;
+            color: #f8fafc;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .card-day {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: transform 0.2s;
+        }
+
+        .exercise-card {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 24px;
+        }
+
+        .btn-youtube {
+            background: #ef4444;
+            color: white;
+            transition: all 0.2s;
+        }
+
+        .time-badge {
+            background: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .hidden { display: none !important; }
+        #progress-bar { transition: width 0.6s ease; }
+        
+        input::placeholder { color: #475569; }
+        
+        .timer-active {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .7; }
+        }
+    </style>
+</head>
+<body class="pb-24 antialiased h-screen flex flex-col">
+
+    <!-- Encabezado -->
+    <header class="px-6 py-5 border-b border-slate-800 bg-slate-950/50 backdrop-blur-xl sticky top-0 z-40 flex justify-between items-end">
+        <div>
+            <p class="text-[10px] font-extrabold text-blue-500 uppercase tracking-[0.2em] mb-1">Rendimiento Semanal</p>
+            <h1 class="text-2xl font-extrabold text-white leading-none tracking-tight">MI ENTRENAMIENTO</h1>
+        </div>
+        <div class="flex flex-col items-end gap-2">
+            <div class="w-20 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div id="progress-bar" class="h-full bg-blue-500 w-0"></div>
+            </div>
+            <button onclick="resetWeek()" class="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Reiniciar Semana</button>
+        </div>
+    </header>
+
+    <!-- Lista de Días -->
+    <main id="view-home" class="flex-1 overflow-y-auto p-6 space-y-4">
+        <div id="days-container" class="space-y-4"></div>
+    </main>
+
+    <!-- Detalle del Entrenamiento -->
+    <main id="view-workout" class="flex-1 overflow-y-auto hidden bg-slate-950 fixed inset-0 z-50 pb-28">
+        <div class="sticky top-0 bg-slate-950/90 py-4 px-6 backdrop-blur-lg z-30 border-b border-slate-900 flex items-center justify-between">
+            <button onclick="goBack()" class="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-900 border border-slate-800 text-white">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+            <div class="text-center">
+                <p id="det-day" class="text-[10px] font-bold text-blue-500 uppercase tracking-widest"></p>
+                <h2 id="det-title" class="text-sm font-black text-white uppercase tracking-tight"></h2>
+            </div>
+            <div id="timer-display" class="text-xs font-black bg-slate-900 text-blue-400 px-3 py-1.5 rounded-lg border border-blue-500/20">
+                REST: 00s
+            </div>
+        </div>
+
+        <div id="workout-content" class="p-6 space-y-6"></div>
+
+        <div class="px-6 mt-8">
+            <button onclick="completeWorkout()" class="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-600/20 active:scale-95 transition-transform">
+                FINALIZAR SESIÓN
+            </button>
+        </div>
+    </main>
+
+    <!-- Script Principal -->
+    <script>
+        const weeklyPlan = [
+            {
+                id: 'L1', day: 'Lunes', title: 'Glúteo & Isquios', type: 'mass',
+                exercises: [
+                    { name: 'Hip Thrust Pesado', sets: '4 x 8-10', rest: 120, active: '10 min', total: '18 min', note: 'Variante: Si no hay barra, usa mancuerna pesada. Progresión: Pausa 3s en máxima contracción.', yt: 'https://www.youtube.com/results?search_query=hip+thrust+barra+tecnica' },
+                    { name: 'Peso Muerto Rumano', sets: '3 x 10-12', rest: 90, active: '8 min', total: '12 min', note: 'Variante: Con banda elástica para tensión extra. Progresión: 3 segundos de bajada (excéntrica).', yt: 'https://www.youtube.com/results?search_query=peso+muerto+rumano+mancuernas' },
+                    { name: 'Sentadilla Búlgara', sets: '3 x 12', rest: 90, active: '9 min', total: '14 min', note: 'Regresión: Apóyate en una pared. Progresión: Sostén una mancuerna en copa (Goblet).', yt: 'https://www.youtube.com/results?search_query=sentadilla+bulgara+gluteo' },
+                    { name: 'Curl Femoral', sets: '3 x 15', rest: 60, active: '6 min', total: '9 min', note: 'Variante: Si no hay máquina, usa una mancuerna entre los pies. Regresión: Puentes de glúteo.', yt: 'https://www.youtube.com/results?search_query=curl+femoral+maquina+sentado' },
+                    { name: 'Abducciones Polea', sets: '3 x 20', rest: 45, active: '5 min', total: '8 min', note: 'Variante: Con banda de resistencia (miniband). Progresión: No toques el suelo entre repeticiones.', yt: 'https://www.youtube.com/results?search_query=abducciones+polea+gluteo' }
+                ]
+            },
+            {
+                id: 'M2', day: 'Martes', title: 'Empuje & Tono', type: 'tone',
+                exercises: [
+                    { name: 'Press Militar', sets: '3 x 12-15', rest: 60, active: '6 min', total: '9 min', note: 'Variante: Sentada para mayor estabilidad lumbar. Progresión: Press a una mano para core.', yt: 'https://www.youtube.com/results?search_query=press+militar+mancuernas' },
+                    { name: 'Flexiones (Push-ups)', sets: '3 x Fallo-2', rest: 60, active: '5 min', total: '8 min', note: 'Regresión: Rodillas apoyadas. Progresión: Pies elevados sobre banco.', yt: 'https://www.youtube.com/results?search_query=flexiones+pecho+mujer' },
+                    { name: 'Extensión Tríceps', sets: '3 x 15', rest: 45, active: '5 min', total: '7 min', note: 'Variante: Copa a dos manos con mancuerna. Progresión: Extensión unilateral.', yt: 'https://www.youtube.com/results?search_query=extension+triceps+polea' },
+                    { name: 'Elevaciones Laterales', sets: '4 x 15-20', rest: 45, active: '8 min', total: '11 min', note: 'Variante: En polea baja. Progresión: Pausa de 1s arriba.', yt: 'https://www.youtube.com/results?search_query=elevaciones+laterales+mancuernas' },
+                    { name: 'Plancha Abdominal', sets: '4 x 45-60s', rest: 30, active: '4 min', total: '6 min', note: 'Variante: Plancha lateral (oblicuos). Progresión: Levanta una pierna alternando.', yt: 'https://www.youtube.com/results?search_query=plancha+abdominal+tecnica' }
+                ]
+            },
+            {
+                id: 'X3', day: 'Miércoles', title: 'Glúteo & Cuádriceps', type: 'mass',
+                exercises: [
+                    { name: 'Sentadilla Goblet', sets: '4 x 10-12', rest: 90, active: '10 min', total: '16 min', note: 'Variante: Sentadilla con barra alta. Progresión: Baja en 4 segundos.', yt: 'https://www.youtube.com/results?search_query=sentadilla+goblet+mancuerna' },
+                    { name: 'Prensa Inclinada', sets: '3 x 12-15', rest: 90, active: '8 min', total: '12 min', note: 'Variante: Sentadilla hack. Progresión: Unilateral (una pierna a la vez).', yt: 'https://www.youtube.com/results?search_query=prensa+piernas+gluteo' },
+                    { name: 'Step Ups (Cajón)', sets: '3 x 10', rest: 60, active: '7 min', total: '10 min', note: 'Regresión: Step bajo. Progresión: Rodilla al pecho al subir.', yt: 'https://www.youtube.com/results?search_query=step+up+mancuerna' },
+                    { name: 'Extensión Cuádriceps', sets: '3 x 15-20', rest: 60, active: '5 min', total: '8 min', note: 'Variante: Sissy squat con apoyo. Progresión: Drop set en la última serie.', yt: 'https://www.youtube.com/results?search_query=extension+piernas+maquina' },
+                    { name: 'Patada Glúteo Polea', sets: '3 x 15', rest: 45, active: '6 min', total: '9 min', note: 'Variante: Patada en máquina. Progresión: Cruza la pierna ligeramente al bajar.', yt: 'https://www.youtube.com/results?search_query=patada+gluteo+polea' }
+                ]
+            },
+            {
+                id: 'J4', day: 'Jueves', title: 'Tracción & Espalda', type: 'tone',
+                exercises: [
+                    { name: 'Jalón al Pecho', sets: '3 x 12-15', rest: 60, active: '6 min', total: '9 min', note: 'Variante: Remo con mancuerna. Progresión: Agarre estrecho neutro.', yt: 'https://www.youtube.com/results?search_query=jalon+al+pecho+polea' },
+                    { name: 'Remo Gironda', sets: '3 x 12-15', rest: 60, active: '6 min', total: '9 min', note: 'Variante: Remo con barra T. Progresión: Aguantar 2s el tirón.', yt: 'https://www.youtube.com/results?search_query=remo+en+polea+baja' },
+                    { name: 'Facepulls', sets: '3 x 20', rest: 45, active: '5 min', total: '8 min', note: 'Variante: Elevaciones posteriores. Progresión: Separar la cuerda al máximo.', yt: 'https://www.youtube.com/results?search_query=facepull+polea' },
+                    { name: 'Curl Bíceps', sets: '3 x 12-15', rest: 45, active: '5 min', total: '7 min', note: 'Variante: Martillo para braquial. Progresión: Curl concentrado.', yt: 'https://www.youtube.com/results?search_query=curl+biceps+mancuerna' },
+                    { name: 'Bird-Dog', sets: '3 x 12', rest: 30, active: '5 min', total: '7 min', note: 'Regresión: Solo piernas. Progresión: Toca codo con rodilla bajo el cuerpo.', yt: 'https://www.youtube.com/results?search_query=bird+dog+ejercicio' }
+                ]
+            },
+            {
+                id: 'V5', day: 'Viernes', title: 'Full Glúteo Pump', type: 'mass',
+                exercises: [
+                    { name: 'Hip Thrust Máquina', sets: '4 x 12-15', rest: 90, active: '10 min', total: '15 min', note: 'Variante: KAS Glute Bridge (rango corto). Progresión: Banda elástica en rodillas.', yt: 'https://www.youtube.com/results?search_query=hip+thrust+en+maquina' },
+                    { name: 'Zancadas Caminando', sets: '3 x 20 pasos', rest: 90, active: '8 min', total: '12 min', note: 'Variante: Zancada atrás (estática). Progresión: Sostén pesas a los lados.', yt: 'https://www.youtube.com/results?search_query=zancadas+caminando+mancuernas' },
+                    { name: 'Peso Muerto Sumo', sets: '3 x 10-12', rest: 90, active: '8 min', total: '12 min', note: 'Variante: Con kettlebell pesada. Progresión: Déficit (parado sobre discos).', yt: 'https://www.youtube.com/results?search_query=peso+muerto+sumo+mancuerna' },
+                    { name: 'Frog Pumps', sets: '3 x 30-50', rest: 45, active: '6 min', total: '8 min', note: 'Variante: Con disco en la pelvis. Progresión: Series gigantes sin descanso.', yt: 'https://www.youtube.com/results?search_query=frog+pumps+ejercicio' },
+                    { name: 'Hiperestensiones', sets: '3 x 15-20', rest: 60, active: '5 min', total: '8 min', note: 'Variante: En suelo (Superman). Progresión: Sostén un disco contra el pecho.', yt: 'https://www.youtube.com/results?search_query=hiperestensiones+gluteo' }
+                ]
+            }
+        ];
+
+        let currentId = null;
+        let timerInterval = null;
+
+        function render() {
+            const cont = document.getElementById('days-container');
+            const comp = JSON.parse(localStorage.getItem('comp_elite_v3')) || [];
+            cont.innerHTML = weeklyPlan.map(p => `
+                <div onclick="openW('${p.id}')" class="card-day p-5 rounded-3xl flex items-center justify-between cursor-pointer border border-white/5 ${comp.includes(p.id) ? 'opacity-40 border-emerald-500/30' : ''}">
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-500 uppercase">${p.day}</p>
+                        <h3 class="text-lg font-black text-white">${p.title}</h3>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-[9px] font-black px-2 py-1 rounded-md ${p.type === 'mass' ? 'bg-pink-500/20 text-pink-400' : 'bg-blue-500/20 text-blue-400'} uppercase">${p.type === 'mass' ? 'Masa' : 'Tono'}</span>
+                        <div class="w-8 h-8 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/></svg>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            updateProgress();
+        }
+
+        function openW(id) {
+            currentId = id;
+            const d = weeklyPlan.find(x => x.id === id);
+            document.getElementById('det-day').innerText = d.day;
+            document.getElementById('det-title').innerText = d.title;
+            
+            const cont = document.getElementById('workout-content');
+            cont.innerHTML = d.exercises.map((ex, idx) => `
+                <div class="exercise-card p-6 border border-slate-800">
+                    <div class="flex justify-between items-start gap-4 mb-4">
+                        <div class="flex-1">
+                            <h4 class="text-xl font-black text-white leading-tight mb-2">${ex.name}</h4>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="time-badge px-2 py-1 rounded-lg italic">Objetivo: ${ex.sets}</span>
+                            </div>
+                        </div>
+                        <a href="${ex.yt}" target="_blank" class="btn-youtube w-10 h-10 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
+                        </a>
+                    </div>
+                    
+                    <!-- Herramienta Registro de Carga -->
+                    <div class="space-y-2 mb-6">
+                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Bitácora de Carga (Kg x Reps)</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" placeholder="Serie 1: 40kg x 10" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-blue-500">
+                            <input type="text" placeholder="Serie 2" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                        <button onclick="startTimer(${ex.rest})" class="w-full bg-slate-900 border border-slate-800 text-blue-400 py-3 rounded-xl text-xs font-bold uppercase tracking-widest mt-2 active:bg-blue-500 active:text-white transition-colors">
+                            Iniciar Descanso (${ex.rest}s)
+                        </button>
+                    </div>
+
+                    <div class="bg-slate-950/50 p-4 rounded-xl border-l-2 border-blue-500">
+                        <p class="text-[9px] text-blue-500 font-bold uppercase mb-1">Notas técnicas & Variantes</p>
+                        <p class="text-xs text-slate-400 italic leading-relaxed">"${ex.note}"</p>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('view-home').classList.add('hidden');
+            document.getElementById('view-workout').classList.remove('hidden');
+            window.scrollTo(0,0);
+        }
+
+        function startTimer(seconds) {
+            if(timerInterval) clearInterval(timerInterval);
+            let timeLeft = seconds;
+            const display = document.getElementById('timer-display');
+            display.classList.add('timer-active');
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                display.innerText = `REST: ${timeLeft}s`;
+                
+                if(timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    display.innerText = "¡LISTO!";
+                    display.classList.remove('timer-active');
+                    if (window.navigator.vibrate) window.navigator.vibrate(500);
+                }
+            }, 1000);
+        }
+
+        function goBack() {
+            if(timerInterval) clearInterval(timerInterval);
+            document.getElementById('timer-display').innerText = "REST: 00s";
+            document.getElementById('view-workout').classList.add('hidden');
+            document.getElementById('view-home').classList.remove('hidden');
+            render();
+        }
+
+        function completeWorkout() {
+            let comp = JSON.parse(localStorage.getItem('comp_elite_v3')) || [];
+            if(!comp.includes(currentId)) comp.push(currentId);
+            localStorage.setItem('comp_elite_v3', JSON.stringify(comp));
+            goBack();
+        }
+
+        function updateProgress() {
+            const comp = JSON.parse(localStorage.getItem('comp_elite_v3')) || [];
+            const p = (comp.length / 5) * 100;
+            document.getElementById('progress-bar').style.width = p + '%';
+        }
+
+        function resetWeek() {
+            if(confirm("¿Reiniciar semana? Se borrará el historial de cargas.")) {
+                localStorage.removeItem('comp_elite_v3');
+                render();
+            }
+        }
+
+        window.onload = render;
+    </script>
+</body>
+</html>
